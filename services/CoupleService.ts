@@ -1,5 +1,5 @@
 // services/CoupleService.ts
-import { CoupleData, InviteData, UserCoupleData } from '@/types/couples.interfaces';
+import { collection_prefix, CoupleData, InviteData, NotificationCouple, UserCoupleData } from '@/types/couples.interfaces';
 import {
   addDoc,
   arrayRemove,
@@ -20,9 +20,10 @@ import { firestore } from '../firebaseConfig';
 
 export class CoupleService {
   // Collections com prefixo webuk_
-  private static INVITES_COLLECTION = 'webuk_invites';
-  private static COUPLES_COLLECTION = 'webuk_couples';
-  private static USER_COUPLES_COLLECTION = 'webuk_user_couples';
+  private static NOTIFICATION_COUPLE_COLLECTION = collection_prefix+'notification';
+  private static INVITES_COLLECTION = collection_prefix+'invites';
+  private static COUPLES_COLLECTION = collection_prefix+'couples';
+  private static USER_COUPLES_COLLECTION = collection_prefix+'user_couples';
 
   /**
    * Convida um parceiro pelo email
@@ -168,7 +169,21 @@ export class CoupleService {
       };
     }
   }
-
+ /**
+  * notifica ao parceiro
+  */
+ private static async notificationCouple(creatorUserId:string, notification:NotificationCouple): Promise<{error?:string | null}> {
+  try {
+    await setDoc(
+      doc(firestore, this.NOTIFICATION_COUPLE_COLLECTION, creatorUserId),
+      notification
+    );
+    return {error: null}
+  } catch (error) {
+    console.error('Falha em notificação:', error);
+    return {error: "Falha em notificação"};
+  }
+}
   /**
    * Cria um novo casal
    */

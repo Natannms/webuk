@@ -1,6 +1,6 @@
 // services/AuthService.ts
 import { auth } from '@/firebaseConfig';
-import { signInWithEmailAndPassword, signOut  } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 interface LoginResult {
   success: boolean;
@@ -43,5 +43,16 @@ export async function logoutUser(): Promise<LogoutResult> {
     } catch (error: any) {
       console.error('Erro ao fazer logout:', error);
       return { success: false, error: 'Ocorreu um erro ao sair da conta' };
+    }
+  }
+
+  export function getFireBaseErrorMessage(err:any){
+    switch(err.code){
+      case 'auth/user-not-found':
+        return 'Usuário não encontrado'
+      case 'auth/invalid-credential':
+        return 'Usuário ou Senha incorreta'
+      default:
+        return 'Ocorreu um erro ao tentar fazer login'
     }
   }

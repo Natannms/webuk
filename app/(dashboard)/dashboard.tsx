@@ -3,6 +3,8 @@ import { logoutUser } from "@/services/AuthService";
 import { CoupleService } from "@/services/CoupleService";
 import { useAuthStore } from "@/store/authStore";
 import { useCoupleStore } from "@/store/coupleStore";
+import { useNotificationStore } from "@/store/notifyStore";
+import { collection_prefix, InviteData, NotificationCouple } from "@/types/couples.interfaces";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, query, where } from "firebase/firestore";
@@ -71,15 +73,16 @@ export default function DashboardScreen() {
   //**sobre Invites */
   const coupleData = useCoupleStore((state) => state.data);
   const clearInvite = useCoupleStore((state) => state.clearInvite);
-  const coupleStore =  useCoupleStore();
+  const coupleStore = useCoupleStore();
+  const {addNotifications} =  useNotificationStore()
   const [showInviteModal, setShowInviteModal] = useState(false);
-
+  
   const completedCount = medications.filter(med => med.completed).length;
   const progressPercentage = (completedCount / medications.length) * 100;
-  const userState =  useAuthStore()
-  const logoutExec = async ()=>{
-    const logoutEdUser = await  logoutUser()
-    if(logoutEdUser.success){
+  const userState = useAuthStore()
+  const logoutExec = async () => {
+    const logoutEdUser = await logoutUser()
+    if (logoutEdUser.success) {
       userState.logout()
       console.log("Logout realizado com sucesso")
       router.replace("/(auth)/signin")
@@ -95,11 +98,13 @@ export default function DashboardScreen() {
     }
   }, [coupleData]);
 
- useEffect(() => {
+  useEffect(() => {
     if (!userState.user) return;
 
+
+
     const q = query(
-      collection(firestore, "webuk_couples"),
+      collection(firestore, collection_prefix + "couples"),
       where("members", "array-contains", userState.user.id)
     );
 
@@ -111,8 +116,58 @@ export default function DashboardScreen() {
       });
     });
 
+
+
     return () => unsubscribe();
   }, [userState.user?.id]);
+
+
+  useEffect(() => {
+    if (!userState.user) return;
+
+    const inviteQuery = query(
+      collection(firestore, collection_prefix + "invites"),
+      where("status", "==", "pending"),
+      where("invitedEmail", "==", userState.user.email.toLowerCase())
+    );
+
+    const unsubscribeInvites = onSnapshot(inviteQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const inviteData = change.doc.data() as InviteData;
+          if(!coupleStore.coupleId){
+            coupleStore.setInvite(inviteData);
+            setShowInviteModal(true)
+          }
+        }
+      });
+    });
+
+    return unsubscribeInvites
+  }, [])
+
+  useEffect(() => {
+    if (!userState.user) return;
+
+    const notificationQuery = query(
+      collection(firestore, collection_prefix + "notification"),
+      where("status", "==", "pending"),
+      where("senderId", "==", userState.user.id)
+    );
+
+    const unsubscribeInvites = onSnapshot(notificationQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const notificationData = change.doc.data() as NotificationCouple[];
+          if(!coupleStore.coupleId){
+            addNotifications(notificationData);
+          }
+        }
+      });
+    });
+
+    return unsubscribeInvites
+  }, [])
 
   const handleAcceptInvite = () => {
     Alert.alert(
@@ -127,7 +182,7 @@ export default function DashboardScreen() {
           text: "Sim",
           onPress: async () => {
             const accpetInvite = await CoupleService.acceptInvite(userState.user!.id, userState.user!.email)
-            if(accpetInvite.error){
+            if (accpetInvite.error) {
               Alert.alert(accpetInvite.error)
               setShowInviteModal(false);
               return
@@ -135,8 +190,8 @@ export default function DashboardScreen() {
 
             coupleStore.setCoupleId(accpetInvite.coupleId!)
             setShowInviteModal(false);
-            clearInvite(); 
-            Alert.alert("Convite aceito!"); 
+            clearInvite();
+            Alert.alert("Convite aceito!");
           },
         },
       ],
@@ -156,14 +211,14 @@ export default function DashboardScreen() {
           text: "Sim",
           onPress: async () => {
             const cancelInvite = await CoupleService.cancelInvite(coupleStore.data!.id!)
-            if(cancelInvite.error){
+            if (cancelInvite.error) {
               Alert.alert(cancelInvite.error)
               setShowInviteModal(false);
               return
             }
             setShowInviteModal(false);
-            clearInvite(); 
-            Alert.alert("Convite cancelado com sucesso!"); 
+            clearInvite();
+            Alert.alert("Convite cancelado com sucesso!");
           },
         },
       ],
@@ -215,7 +270,7 @@ export default function DashboardScreen() {
             <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
               <Ionicons name="notifications-outline" size={22} color="#374151" />
             </TouchableOpacity>
-            <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center" onPress={()=>logoutExec()}>
+            <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center" onPress={() => logoutExec()}>
               <Ionicons name="exit" size={22} color="#374151" />
             </TouchableOpacity>
           </View>
@@ -542,7 +597,7 @@ export default function DashboardScreen() {
             <Text className="text-xs text-gray-500 font-medium">Analytics</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center py-2">
+          <TouchableOpacity className="items-center py-2" onPress={() => router.push('/trips')}>
             <View className="w-10 h-10 bg-blue-500 rounded-xl items-center justify-center mb-1" style={{
               shadowColor: '#3B82F6',
               shadowOffset: { width: 0, height: 4 },
@@ -551,15 +606,17 @@ export default function DashboardScreen() {
             }}>
               <Ionicons name="calendar" size={20} color="white" />
             </View>
-            <Text className="text-xs text-blue-600 font-semibold">Today</Text>
+            <Text className="text-xs text-blue-600 font-semibold">Trips</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center py-2" onPress={() => router.push('/invite')}>
-            <View className="w-10 h-10 bg-gray-100 rounded-xl items-center justify-center mb-1">
-              <Ionicons name="medical-outline" size={20} color="#6B7280" />
-            </View>
-            <Text className="text-xs text-gray-500 font-medium">Couple</Text>
-          </TouchableOpacity>
+         {!coupleStore.coupleId && (
+           <TouchableOpacity className="items-center py-2" onPress={() => router.push('/invite')}>
+           <View className="w-10 h-10 bg-gray-100 rounded-xl items-center justify-center mb-1">
+             <Ionicons name="medical-outline" size={20} color="#6B7280" />
+           </View>
+           <Text className="text-xs text-gray-500 font-medium">Couple</Text>
+         </TouchableOpacity>
+         )}
         </View>
       </View>
     </View>

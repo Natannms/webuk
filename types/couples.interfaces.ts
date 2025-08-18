@@ -35,3 +35,12 @@ export interface InviteData {
     invites?: any[];
     error?: string;
   }
+  export interface NotificationCouple {
+    message: string
+    status: 'read' | 'pending'
+    senderId: string
+    senderEmail?: string
+    coupleId?: string
+  }
+
+  export const collection_prefix = "webuk_"

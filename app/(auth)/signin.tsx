@@ -1,9 +1,11 @@
 import { auth } from "@/firebaseConfig"; // seu arquivo de configuração Firebase
+import { getFireBaseErrorMessage } from "@/services/AuthService";
 import { useAuthStore } from "@/store/authStore";
 import { router } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Toast from 'react-native-toast-message';
 
 export default function SignInScreen() {
   const login = useAuthStore((state) => state.login);
@@ -14,7 +16,11 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+      Toast.show({
+        type: 'error',
+        text1: 'Ops !',
+        text2: "Preencha todos os campos"
+      });
       return;
     }
 
@@ -34,8 +40,12 @@ export default function SignInScreen() {
       
       router.replace("/(dashboard)/dashboard"); 
     } catch (error: any) {
-      console.error("Login error:", error);
-      Alert.alert("Erro ao entrar", error.message || "Algo deu errado.");
+      const err =  getFireBaseErrorMessage(error)
+      Toast.show({
+        type: 'error',
+        text1: 'Ops !',
+        text2: err
+      });
     } finally {
       setLoading(false);
     }
@@ -43,6 +53,7 @@ export default function SignInScreen() {
 
   return (
     <View className="flex-1 bg-white px-6 justify-center">
+    <Toast />
       <Text className="text-3xl font-bold text-[#FF9500] mb-2">Bem-vindo de volta!</Text>
       <Text className="text-gray-500 mb-8">Entre com sua conta para continuar</Text>
 

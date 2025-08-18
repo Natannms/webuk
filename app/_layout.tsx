@@ -10,6 +10,7 @@ import { CoupleService } from '@/services/CoupleService';
 import { useAuthStore } from '@/store/authStore';
 import { useCoupleStore } from '@/store/coupleStore';
 import { useEffect, useState } from 'react';
+import Toast from 'react-native-toast-message';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -52,6 +53,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        
       <Stack>
         {isLoggedIn ? (
           <Stack.Screen
